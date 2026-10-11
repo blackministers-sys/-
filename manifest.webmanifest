@@ -1,0 +1,20 @@
+{
+  "name": "MindForge — тренажёр мышления",
+  "short_name": "MindForge",
+  "description": "Персональный тренажёр логики и бизнес-мышления",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#101827",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
