@@ -1,0 +1,12 @@
+{
+  "name": "qr-photo-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stable image-only links backed by Yandex Disk public files",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
