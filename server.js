@@ -14,12 +14,10 @@ async function getOriginalDownloadUrl() {
 }
 
 let imageCache = null;
-let imageCacheExpiresAt = 0;
 let imageCachePromise = null;
-const IMAGE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 async function getCachedImage() {
-  if (imageCache && Date.now() < imageCacheExpiresAt) return imageCache;
+  if (imageCache) return imageCache;
   if (imageCachePromise) return imageCachePromise;
 
   imageCachePromise = (async () => {
@@ -31,14 +29,15 @@ async function getCachedImage() {
     const bytes = Buffer.from(await upstream.arrayBuffer());
     if (bytes.length < 1000) throw new Error("Image response is unexpectedly small: " + bytes.length + " bytes");
     imageCache = { bytes, contentType };
-    imageCacheExpiresAt = Date.now() + IMAGE_CACHE_TTL_MS;
+    process.stdout.write("POSTCARD_CACHE_READY: " + bytes.length + " bytes\n");
     return imageCache;
   })();
 
   try {
     return await imageCachePromise;
-  } finally {
+  } catch (error) {
     imageCachePromise = null;
+    throw error;
   }
 }
 
@@ -57,7 +56,7 @@ img{display:block;width:100vw;height:100vh;height:100dvh;object-fit:contain;obje
 </style>
 </head>
 <body><img src="/image/card" alt="Праздничная открытка"></body>
-</html>`
+</html>`;
 
 const server = http.createServer(async (req, res) => {
   if (req.url === "/health") {
@@ -75,7 +74,7 @@ const server = http.createServer(async (req, res) => {
         "content-type": contentType,
         "content-length": bytes.length,
         "content-disposition": "inline; filename=postcard",
-        "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
+        "cache-control": "public, max-age=31536000, immutable",
         "x-content-type-options": "nosniff"
       });
       return req.method === "HEAD" ? res.end() : res.end(bytes);
@@ -90,4 +89,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 10000);
-server.listen(port, "0.0.0.0", () => process.stdout.write("QR photo relay listening on " + port + "\n"));
+server.listen(port, "0.0.0.0", () => {
+  process.stdout.write("QR photo relay listening on " + port + "\n");
+  getCachedImage().catch(error => process.stderr.write("POSTCARD_PRELOAD_ERROR: " + error.message + "\n"));
+});
