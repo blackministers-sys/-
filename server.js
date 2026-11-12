@@ -24,30 +24,11 @@ const page = `<!doctype html>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;background:#fff}
 body{display:flex;align-items:center;justify-content:center;overflow:hidden}
-#photo{display:block;width:100vw;height:100vh;height:100dvh;object-fit:contain;object-position:center center}
-#error{display:none;padding:24px;max-width:600px;text-align:center;font:16px/1.5 Arial,sans-serif;color:#222;overflow-wrap:anywhere}
+img{display:block;width:100vw;height:100vh;height:100dvh;object-fit:contain;object-position:center center}
 </style>
 </head>
-<body>
-<img id="photo" alt="Праздничная открытка">
-<div id="error">Не удалось загрузить открытку. <span id="detail"></span></div>
-<script>
-fetch("/image/card",{cache:"no-store"}).then(async r=>{
-  const type=r.headers.get("content-type")||"";
-  if(!r.ok || !type.startsWith("image/")) {
-    const msg=await r.text();
-    throw new Error("Сервер вернул "+r.status+". "+msg);
-  }
-  const blob=await r.blob();
-  document.getElementById("photo").src=URL.createObjectURL(blob);
-}).catch(e=>{
-  document.getElementById("photo").style.display="none";
-  document.getElementById("error").style.display="block";
-  document.getElementById("detail").textContent=e.message;
-});
-</script>
-</body>
-</html>`;
+<body><img src="/image/card" alt="Праздничная открытка"></body>
+</html>`
 
 const server = http.createServer(async (req, res) => {
   if (req.url === "/health") {
