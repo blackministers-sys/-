@@ -13,6 +13,35 @@ async function getOriginalDownloadUrl() {
   return data.href;
 }
 
+let imageCache = null;
+let imageCacheExpiresAt = 0;
+let imageCachePromise = null;
+const IMAGE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+
+async function getCachedImage() {
+  if (imageCache && Date.now() < imageCacheExpiresAt) return imageCache;
+  if (imageCachePromise) return imageCachePromise;
+
+  imageCachePromise = (async () => {
+    const downloadUrl = await getOriginalDownloadUrl();
+    const upstream = await fetch(downloadUrl, { headers: { "accept": "image/*,*/*" } });
+    if (!upstream.ok) throw new Error("Image download returned " + upstream.status);
+    const contentType = upstream.headers.get("content-type") || "image/jpeg";
+    if (!contentType.startsWith("image/")) throw new Error("Expected image, received " + contentType);
+    const bytes = Buffer.from(await upstream.arrayBuffer());
+    if (bytes.length < 1000) throw new Error("Image response is unexpectedly small: " + bytes.length + " bytes");
+    imageCache = { bytes, contentType };
+    imageCacheExpiresAt = Date.now() + IMAGE_CACHE_TTL_MS;
+    return imageCache;
+  })();
+
+  try {
+    return await imageCachePromise;
+  } finally {
+    imageCachePromise = null;
+  }
+}
+
 const page = `<!doctype html>
 <html lang="ru">
 <head>
@@ -41,18 +70,12 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.url === "/image/card") {
     try {
-      const downloadUrl = await getOriginalDownloadUrl();
-      const upstream = await fetch(downloadUrl, { headers: { "accept": "image/*,*/*" } });
-      if (!upstream.ok) throw new Error("Image download returned " + upstream.status);
-      const contentType = upstream.headers.get("content-type") || "image/jpeg";
-      if (!contentType.startsWith("image/")) throw new Error("Expected image, received " + contentType);
-      const bytes = Buffer.from(await upstream.arrayBuffer());
-      if (bytes.length < 1000) throw new Error("Image response is unexpectedly small: " + bytes.length + " bytes");
+      const { bytes, contentType } = await getCachedImage();
       res.writeHead(200, {
         "content-type": contentType,
         "content-length": bytes.length,
         "content-disposition": "inline; filename=postcard",
-        "cache-control": "public, max-age=300",
+        "cache-control": "public, max-age=86400, stale-while-revalidate=604800",
         "x-content-type-options": "nosniff"
       });
       return req.method === "HEAD" ? res.end() : res.end(bytes);
