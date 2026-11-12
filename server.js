@@ -54,7 +54,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
     return res.end("ok");
   }
-  if (req.url === "/photo/card" || req.url === "/photo/card/") {
+  if (req.url === "/" || req.url === "/photo/card" || req.url === "/photo/card/") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
     return res.end(page);
   }
